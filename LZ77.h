@@ -21,7 +21,8 @@ namespace LZ_zip{
     using std::endl;
     //可把文件解为三元组
     class LZ77{
-        //friend class Huffman;//使用其中的vector
+        friend class Huffman;//使用其中的CodeNode
+        
         private:
             struct CodeNode
             {
@@ -33,7 +34,7 @@ namespace LZ_zip{
             //forbid initialization no-const static member.
             short maxWindow = 32767;
             std::vector<CodeNode> NodeQueue;
-            Stream FileStream;
+            InputStream FileStream;
             std::string DecodefileContent;
         private:
             void LZ_encode();
@@ -89,6 +90,7 @@ namespace LZ_zip{
         encoding(FileContent);
     }
 
+    //太慢, 必须优化
     void LZ77::encoding(const std::string_view& file){
         int window1 = 0, window2 = 0;
         for(int i = 0; i < file.length(); i++) {

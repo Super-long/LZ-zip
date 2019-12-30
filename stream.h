@@ -9,30 +9,31 @@
 namespace LZ_zip{
 
     //TODO:对于close考虑异常安全性
-    class Stream{
+    class InputStream{
         public:
-            explicit Stream(std::string filename) : encode_file(filename) {
+            explicit InputStream(std::string filename) : encode_file(filename) {
                 if(!encode_file.is_open()){
                     std::cout << "未打开\n"; //需要考虑
                 }
             }
 
-            bool ExchangeOpenFile(std::string str){
+            template<typename T>
+            bool ExchangeOpenFile(T&& temp){
                 CloseFile();
-                encode_file.open(str);
+                encode_file.open(temp);
             }
 
             std::string ReadFile(){
                 std::ostringstream buf;
                 buf << encode_file.rdbuf();
-                return buf.str(); //值传递 关键想让功能独立
+                return buf.str(); //TODO :值传递 关键想让功能独立
             }
 
             void Close(){
                 CloseFile();
             }
 
-            ~Stream(){
+            ~InputStream(){
                 CloseFile();
             }
         private:
@@ -40,6 +41,43 @@ namespace LZ_zip{
             void CloseFile(){
                 if(encode_file.is_open())
                     encode_file.close();
+            }
+    };
+
+    class OutputStream{
+        public:
+            explicit OutputStream(std::string filename) : decode_file(filename, std::ofstream::app) {
+                if(!decode_file.is_open()){
+                    std::cout << "未打开\n"; //需要考虑
+                }
+            }
+            template<typename T>
+            void WriteFile(T&& temp){
+                if(decode_file.is_open()){
+                    decode_file << temp;
+                }
+            }
+
+            template<typename T>
+            bool ExchangeOpenFile(T&& temp){
+                decode_file.close();
+                decode_file.open(temp);
+                return decode_file.is_open();
+            }
+
+            void Close(){
+                CloseFile();
+            }
+
+            ~OutputStream(){
+                CloseFile();
+            }
+
+        private:
+            std::ofstream decode_file;
+            void CloseFile(){
+                if(decode_file.is_open())
+                    decode_file.close();
             }
     };
 }

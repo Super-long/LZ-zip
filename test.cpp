@@ -9,6 +9,7 @@ int main(){
 /*     temp.Encode();
     temp.ExchangeFilename("bbb.txt"); */
     temp.Encode();
+    cout << "解码完成:\n";
     temp.Decode();
     temp.show();
     LZ_zip::Huffman tree;
