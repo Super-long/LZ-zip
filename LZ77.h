@@ -6,6 +6,7 @@
 #include<string>
 #include<string_view>
 #include"stream.h"
+#include"huffman.h"
 //它的基本假设是，如果一个字符串要重复，那么也是在附近重复，远的地方就不用找了
 //适合于有大量的局部重复的子串
 
@@ -14,22 +15,24 @@
  * @ 
 */
 namespace LZ_zip{
+    //TODO 记得删除
     using std::cout;
     using std::endl;
+    //可把文件解为三元组
     class LZ77{
+        //friend class Huffman;//使用其中的vector
         private:
             struct CodeNode
             {
-                int off;
-                int len;
-                char nextchar;
+                int distance;
+                int length;
+                char literal;
             };
         private:
             //forbid initialization no-const static member.
             short maxWindow = 32767;
             std::vector<CodeNode> NodeQueue;
             Stream FileStream;
-            long long Filelength;
             std::string DecodefileContent;
         private:
             void LZ_encode();
@@ -37,7 +40,10 @@ namespace LZ_zip{
             void LZ_decode();
         public:
             LZ77() = default;
-            explicit LZ77(std::string str) : FileStream(str),Filelength(){}
+            const auto& code()const{
+                return NodeQueue;
+            }
+            explicit LZ77(std::string str) : FileStream(str){}
             
             void ExchangeWindow(short win) noexcept{
                 maxWindow = win;
@@ -47,7 +53,7 @@ namespace LZ_zip{
                 using std::cout; using std::endl;
                 std::cout << "all " << NodeQueue.size() << std::endl;
                 for(auto T : NodeQueue){
-                    cout << T.off << " " <<T.len << " " << T.nextchar << endl;
+                    cout << T.distance << " " <<T.length << " " << T.literal << endl;
                 }
                 cout << DecodefileContent << endl;
             }
@@ -58,23 +64,24 @@ namespace LZ_zip{
                 NodeQueue.clear();//想想到底数据需要清空吗
                 FileStream.ExchangeOpenFile(str);
             }
+
     };
     void LZ77::LZ_decode(){
         for(int i = 0; i < NodeQueue.size(); i++) {
-            if(NodeQueue[i].len == 0) {
-                DecodefileContent += NodeQueue[i].nextchar;
+            if(NodeQueue[i].length == 0) {
+                DecodefileContent += NodeQueue[i].literal;
             } else {
-                int len = DecodefileContent.length();
-                len -= NodeQueue[i].off;
-                //这里用右值更好 可惜库里没有 可以自己后面加上
-                std::string temp = DecodefileContent.substr(len, NodeQueue[i].len);
-                DecodefileContent += temp + NodeQueue[i].nextchar;
-            }//涉及大量字符串的拼接
+                int length = DecodefileContent.length();
+                length -= NodeQueue[i].distance;
+                //TODO 涉及大量字符串的拼接 这里用右值更好 可惜库里没有 可以自己后面加上
+                std::string temp = DecodefileContent.substr(length, NodeQueue[i].length);
+                DecodefileContent += temp + NodeQueue[i].literal;
+            }
         }
     }
 
     void LZ77::LZ_encode(){
-        //这里消耗资源太大
+        //TODO 这里消耗资源太大
         std::string FileContent = FileStream.ReadFile();
         DecodefileContent.resize(FileContent.size() + 1);
         std::cout << "this is file content.\n";
@@ -85,7 +92,7 @@ namespace LZ_zip{
     void LZ77::encoding(const std::string_view& file){
         int window1 = 0, window2 = 0;
         for(int i = 0; i < file.length(); i++) {
-            if(i + 1 <= maxWindow) window1 = i; //确定查询窗口的尺寸 
+            if(i + 1 <= maxWindow) window1 = i;
             else window1 = maxWindow;
             
             if(i + window1 < file.length()) window2 = window1;  
@@ -94,29 +101,29 @@ namespace LZ_zip{
             const std::string_view& str1 = file.substr(i - window1, window1);
             const std::string_view& str2 = file.substr(i, window2);
             
-            int off = -1;
+            int distance = -1;
             while(true) {
                 if(window2 == 0) break;
                 const std::string_view& str3 = str2.substr(0, window2);
-                off = str1.find(str3);
-                if(off != -1) break; 
+                distance = str1.find(str3);
+                if(distance != -1) break; 
                 window2--;
                 if(window2 <= 0) break;
             }
 
-            if(off != -1) {
-                CodeNode cd;
-                cd.len = window2;
-                cd.off = window1 - off;
-                cd.nextchar = file[i + window2];
-                NodeQueue.push_back(std::move(cd));
+            if(distance != -1) {
+                CodeNode temp;
+                temp.length = window2;
+                temp.distance = window1 - distance;
+                temp.literal = file[i + window2];
+                NodeQueue.push_back(std::move(temp));
                 i += window2;
             } else {
-                CodeNode cd;
-                cd.len = 0;
-                cd.off = 0;
-                cd.nextchar = file[i + window2];
-                NodeQueue.push_back(std::move(cd));
+                CodeNode temp;
+                temp.length = 0;
+                temp.distance = 0;
+                temp.literal = file[i + window2];
+                NodeQueue.push_back(std::move(temp));
             }
         }
     }

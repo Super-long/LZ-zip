@@ -8,7 +8,7 @@
 
 namespace LZ_zip{
 
-    //考虑异常安全性
+    //TODO:对于close考虑异常安全性
     class Stream{
         public:
             explicit Stream(std::string filename) : encode_file(filename) {
