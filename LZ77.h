@@ -14,6 +14,7 @@
 /**
  * @ 
 */
+
 namespace LZ_zip{
     //TODO 记得删除
     using std::cout;
@@ -51,7 +52,7 @@ namespace LZ_zip{
 
             void show() const{
                 using std::cout; using std::endl;
-                std::cout << "all " << NodeQueue.size() << std::endl;
+                std::cout << "结点项数 : " << NodeQueue.size() << std::endl;
                 for(auto T : NodeQueue){
                     cout << T.distance << " " <<T.length << " " << T.literal << endl;
                 }
@@ -83,9 +84,8 @@ namespace LZ_zip{
     void LZ77::LZ_encode(){
         //TODO 这里消耗资源太大
         std::string FileContent = FileStream.ReadFile();
+        cout << "文件大小 : " << FileContent.size() << endl;
         DecodefileContent.resize(FileContent.size() + 1);
-        std::cout << "this is file content.\n";
-        std::cout << FileContent << std::endl;
         encoding(FileContent);
     }
 
