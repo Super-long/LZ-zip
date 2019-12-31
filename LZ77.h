@@ -34,6 +34,7 @@ namespace LZ_zip{
             //forbid initialization no-const static member.
             short maxWindow = 32767;
             std::vector<CodeNode> NodeQueue;
+            std::vector<CodeNode> DecodeResult;
             InputStream FileStream;
             std::string DecodefileContent;
         private:
@@ -53,7 +54,6 @@ namespace LZ_zip{
 
             void show() const{
                 using std::cout; using std::endl;
-                std::cout << "结点项数 : " << NodeQueue.size() << std::endl;
                 for(auto T : NodeQueue){
                     cout << T.distance << " " <<T.length << " " << T.literal << endl;
                 }
@@ -67,17 +67,21 @@ namespace LZ_zip{
                 FileStream.ExchangeOpenFile(str);
             }
 
+            void GetDecodeResult(const decltype(DecodeResult) result){
+                DecodeResult.assign(result.begin(), result.end());
+            }
+
     };
     void LZ77::LZ_decode(){
-        for(int i = 0; i < NodeQueue.size(); i++) {
-            if(NodeQueue[i].length == 0) {
-                DecodefileContent += NodeQueue[i].literal;
+        for(int i = 0; i < DecodeResult.size(); i++) {
+            if(DecodeResult[i].length == 0) {
+                DecodefileContent += DecodeResult[i].literal;
             } else {
                 int length = DecodefileContent.length();
-                length -= NodeQueue[i].distance;
+                length -= DecodeResult[i].distance;
                 //TODO 涉及大量字符串的拼接 这里用右值更好 可惜库里没有 可以自己后面加上
-                std::string temp = DecodefileContent.substr(length, NodeQueue[i].length);
-                DecodefileContent += temp + NodeQueue[i].literal;
+                std::string temp = DecodefileContent.substr(length, DecodeResult[i].length);
+                DecodefileContent += temp + DecodeResult[i].literal;
             }
         }
     }
