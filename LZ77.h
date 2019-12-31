@@ -7,19 +7,8 @@
 #include<string_view>
 #include"stream.h"
 #include"huffman.h"
-//它的基本假设是，如果一个字符串要重复，那么也是在附近重复，远的地方就不用找了
-//适合于有大量的局部重复的子串
-
-//策略 
-/**
- * @ 
-*/
 
 namespace LZ_zip{
-    //TODO 记得删除
-    using std::cout;
-    using std::endl;
-    //可把文件解为三元组
     class LZ77{
         friend class Huffman;
         friend class LZL_zip;
@@ -69,7 +58,7 @@ namespace LZ_zip{
             void Encode() {LZ_encode();}
             void Decode() {LZ_decode();}
             void ExchangeFilename(std::string str){
-                NodeQueue.clear();//想想到底数据需要清空吗
+                NodeQueue.clear();
                 FileStream.ExchangeOpenFile(str);
                 filename = std::move(str);
             }
@@ -86,25 +75,23 @@ namespace LZ_zip{
             } else {
                 int length = DecodefileContent.length();
                 length -= DecodeResult[i].distance;
-                //TODO 涉及大量字符串的拼接 这里用右值更好 可惜库里没有 可以自己后面加上
+                //Concatenation involving a large number of strings, Rvalue is better. Unfortunately std didn't have it, I can later added.  
                 std::string temp = DecodefileContent.substr(length, DecodeResult[i].length);
                 DecodefileContent += temp + DecodeResult[i].literal;
             }
         }
-        //cout << DecodefileContent << endl;
         OutputStream os("Decode-" + filename + ".LZL-zip");
         os.WriteFile(DecodefileContent);
     }
 
     void LZ77::LZ_encode(){
-        //TODO 这里消耗资源太大
-        std::string FileContent = FileStream.ReadFile();
-        cout << "文件大小 : " << FileContent.size() << endl;
+        const std::string& FileContent = FileStream.ReadFile();
+        std::cout << "File size : " << FileContent.size() << std::endl;
         DecodefileContent.resize(FileContent.size() + 1);
         encoding(FileContent);
     }
 
-    //太慢, 必须优化
+    //so slow.
     void LZ77::encoding(const std::string_view& file){
         int window1 = 0, window2 = 0;
         for(int i = 0; i < file.length(); i++) {

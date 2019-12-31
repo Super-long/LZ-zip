@@ -8,12 +8,11 @@
 
 namespace LZ_zip{
 
-    //TODO:对于close考虑异常安全性
     class InputStream{
         public:
             explicit InputStream(std::string filename) : encode_file(filename) {
                 if(!encode_file.is_open()){
-                    std::cout << "未打开\n"; //需要考虑
+                    std::cout << "File not open\n";
                 }
             }
 
@@ -26,7 +25,8 @@ namespace LZ_zip{
             std::string ReadFile(){
                 std::ostringstream buf;
                 buf << encode_file.rdbuf();
-                return buf.str(); //TODO :值传递 关键想让功能独立
+                return buf.str();
+                //TODO : Value passing, Want to make features independent.
             }
 
             void Close(){
@@ -48,7 +48,7 @@ namespace LZ_zip{
         public:
             explicit OutputStream(std::string filename) : decode_file(filename, std::ofstream::app) {
                 if(!decode_file.is_open()){
-                    std::cout << "未打开\n"; //需要考虑
+                    std::cout << "File not open.\n";
                 }
             }
             template<typename T>

@@ -11,9 +11,8 @@
 
 #include<iostream>
 
-//回去看蓝书编译依赖性
 namespace LZ_zip{
-    //TODO 类太大了 不好 为了更好的压缩比 牺牲时间
+
     class LZ77;
     int ConStrNumber(const std::string& str);
     char ConStrchar(const std::string& str, size_t pos, size_t n);
@@ -80,7 +79,10 @@ namespace LZ_zip{
     };
 
     //To calculate the theoretical compression ratio.
-    void Huffman::show(){ //关于这里的不加const可以写一篇博客 哈希map重载[]没有返回const的
+    void Huffman::show(){
+        using std::cout;
+        using std::endl;
+
         int ans = 0;
         for(const auto&[number, code] : distance_code){
             ans += code.length() * distance[number];
@@ -207,7 +209,6 @@ namespace LZ_zip{
         root = QueOfDistance.top().second;
     }
 
-    //TODO:设置为友元类不能直接使用vector 查下原因
     void Huffman::initial(std::unique_ptr<LZ77>& LZ){
         auto code = LZ->code();
         filename = LZ->Filename();
@@ -223,7 +224,7 @@ namespace LZ_zip{
         DecodeResult.resize(code.size() + 1);
     }
 
-    //TODO 代码写的复用差 功能实现以后改一手
+    //TODO : This function have poor code reuse. exchange it.
     void Huffman::Dencoding(const std::string& filecontent){
        
         size_t Index = 0;
