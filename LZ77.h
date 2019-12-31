@@ -21,8 +21,9 @@ namespace LZ_zip{
     using std::endl;
     //可把文件解为三元组
     class LZ77{
-        friend class Huffman;//使用其中的CodeNode
-        
+        friend class Huffman;
+        friend class LZL_zip;
+
         private:
             struct CodeNode
             {
@@ -36,6 +37,7 @@ namespace LZ_zip{
             std::vector<CodeNode> NodeQueue;
             std::vector<CodeNode> DecodeResult;
             InputStream FileStream;
+            std::string filename;
             std::string DecodefileContent;
         private:
             void LZ_encode();
@@ -46,10 +48,14 @@ namespace LZ_zip{
             const auto& code()const{
                 return NodeQueue;
             }
-            explicit LZ77(std::string str) : FileStream(str){}
+            explicit LZ77(std::string str) : FileStream(str), filename(std::move(str)) {}
             
             void ExchangeWindow(short win) noexcept{
                 maxWindow = win;
+            }
+
+            const std::string& Filename() const{
+                return filename;
             }
 
             void show() const{
@@ -65,9 +71,10 @@ namespace LZ_zip{
             void ExchangeFilename(std::string str){
                 NodeQueue.clear();//想想到底数据需要清空吗
                 FileStream.ExchangeOpenFile(str);
+                filename = std::move(str);
             }
 
-            void GetDecodeResult(const decltype(DecodeResult) result){
+            void GetDecodeResult(const decltype(DecodeResult)& result){
                 DecodeResult.assign(result.begin(), result.end());
             }
 
@@ -84,6 +91,9 @@ namespace LZ_zip{
                 DecodefileContent += temp + DecodeResult[i].literal;
             }
         }
+        //cout << DecodefileContent << endl;
+        OutputStream os("Decode-" + filename + ".LZL-zip");
+        os.WriteFile(DecodefileContent);
     }
 
     void LZ77::LZ_encode(){

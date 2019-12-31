@@ -24,6 +24,7 @@ namespace LZ_zip{
         private:
             int root;
             int num_entry;
+            std::string filename;
             std::vector<int> HuffmanTree[65537];
 
             std::vector<typename LZ77::CodeNode> DecodeResult;
@@ -71,7 +72,7 @@ namespace LZ_zip{
             Huffman() = default;
             void encode(std::unique_ptr<LZ77>& LZ);
             void Decode();
-            void show();//TODO 不能加const 
+            void show();
 
             const auto& ReturnDecodeResult() const{
                 return DecodeResult;
@@ -79,7 +80,7 @@ namespace LZ_zip{
     };
 
     //To calculate the theoretical compression ratio.
-    void Huffman::show(){
+    void Huffman::show(){ //关于这里的不加const可以写一篇博客 哈希map重载[]没有返回const的
         int ans = 0;
         for(const auto&[number, code] : distance_code){
             ans += code.length() * distance[number];
@@ -88,9 +89,6 @@ namespace LZ_zip{
         for(const auto&[number, code] : length_code){
             two += code.length() * length[number];
         }
-        for(const auto&[number, code] : literal_code){
-            std::cout << number << " :" << code << std::endl;
-        } 
         int three = 0;
         for(const auto&[number, code] : literal_code){
             three += code.length() * literal[number];
@@ -119,7 +117,7 @@ namespace LZ_zip{
     } */
 
     void Huffman::Decode(){
-        InputStream input("Temp.LZL-zip");
+        InputStream input(filename + ".LZL-zip");
         std::string str = input.ReadFile(); 
         std::string filecontent;  
         for(int i=0;i<str.size();++i){
@@ -136,11 +134,9 @@ namespace LZ_zip{
     */
     void Huffman::encode(std::unique_ptr<LZ77>& LZ){
         initial(LZ);
-
         encoding<int, int, decltype(distance)>(distance, 32768);
         dfs_distance(root, "");
         init();
-
         encoding<int, int, decltype(length)>(length, 256);
         dfs_length(root, "");
         init();
@@ -157,7 +153,7 @@ namespace LZ_zip{
      * @ The reason why each items written together is program locality.
     */
     void Huffman::WritingFile(){
-        OutputStream os("Temp.LZL-zip");
+        OutputStream os(filename + ".LZL-zip");
         std::string major;
         writingfile(major, os, OrderDistance, distance_code);
         writingfile(major, os, OrderLength, length_code);
@@ -214,6 +210,7 @@ namespace LZ_zip{
     //TODO:设置为友元类不能直接使用vector 查下原因
     void Huffman::initial(std::unique_ptr<LZ77>& LZ){
         auto code = LZ->code();
+        filename = LZ->Filename();
         for(const auto&[distance_, length_, literal_] : code){
             distance[distance_]++;
             OrderDistance.push_back(distance_);
@@ -223,13 +220,12 @@ namespace LZ_zip{
             OrderLiteral.push_back(literal_);
         }
         num_entry = code.size();
-        DecodeResult.reserve(code.size() + 1);
+        DecodeResult.resize(code.size() + 1);
     }
 
     //TODO 代码写的复用差 功能实现以后改一手
     void Huffman::Dencoding(const std::string& filecontent){
-        size_t pos = 32;
-        size_t n = 8;
+       
         size_t Index = 0;
         std::string str;
         
@@ -241,7 +237,6 @@ namespace LZ_zip{
                 str.clear();
             }
         }
-
         entry = 0;
         while(entry < num_entry){
             str.push_back(filecontent[Index++]);
