@@ -7,13 +7,23 @@
 #include<functional>
 #include<bitset>
 #include<queue>
+#include<list>
 
 #include<iostream>
 
 //回去看蓝书编译依赖性
 namespace LZ_zip{
+    //TODO 在这个设置一个全局变量 测试writingfile函数写入的总字节数 记得删除
+    size_t AllBytesInFile;
+
+
     //TODO 类太大了 不好 为了更好的压缩比 牺牲时间
     class LZ77;
+    int ConStrNumber(const std::string& str);
+    char ConStrchar(const std::string& str, size_t pos, size_t n);
+    bool GetBit(std::stringstream& ss);
+    std::string GetBytes(char ch);
+
     class Huffman{
         private:
             int root;
@@ -30,23 +40,33 @@ namespace LZ_zip{
             std::unordered_map<int, int> length;
             std::unordered_map<unsigned short, int> literal;
 
+            std::list<int> OrderDistance;
+            std::list<int> OrderLength;
+            std::list<unsigned short> OrderLiteral;
+
             std::unordered_map<int, std::string> distance_code;
             std::unordered_map<std::string, short> distance_number;
             std::unordered_map<int, std::string> length_code;
             std::unordered_map<std::string, short> length_number;
             std::unordered_map<int, std::string> literal_code;
-            std::unordered_map<std::string, short> literal_number;
+            std::unordered_map<std::string, unsigned short> literal_number;
 
             template
             <typename key, typename value, typename target_>
             void encoding(target_ mp, int index);
-            void Dencoding(const std::string_view&);
+
+            template
+            <typename mp, typename Code>
+            void writingfile(std::string& major, OutputStream& os, const mp& key_value, Code& code);
+  
+            void Dencoding(const std::string&);
             void initial(const LZ77& LZ);
-            void WritingFile();
+            
 
             void dfs_distance(int Root, std::string&& str);
             void dfs_length(int Root, std::string&& str);
             void dfs_literal(int Root, std::string&& str);
+            bool ZeroFill(std::string& str) const;
             void init();
 
             bool operator=(const Huffman&) = delete;
@@ -73,15 +93,40 @@ namespace LZ_zip{
                 dfs_literal(root, "");
                 init();
 
-                //移位压到文件中
+                WritingFile();
+                cout << "写文件的总字节数为 : " << AllBytesInFile << endl;
             }
 
+            void WritingFile();  //TODO 测试完改成私有
 
-            //先写入文件 需要写成字节
+/*             void Decode(){
+                InputStream input("Temp.LZ-zip");
+                std::string str = input.ReadFile();
+                std::stringstream ss(str);
+                std::string filecontent;//保证这个是一个01串
+                //底下丢字节了
+                int count = 0;
+                while(ss){
+                    GetBit(ss) ? filecontent.push_back('1') 
+                               : filecontent.push_back('0');
+                    count++;
+                }
+
+                cout << "循环 : " << count << endl;
+                for(int i=0;i<8;++i) 
+                    filecontent.push_back(GetBit(ss));
+                cout << "读取到的位数 : " << filecontent.size() << endl;
+                Dencoding(filecontent);
+            } */
+
             void Decode(){
-                //从文件中得到一个string串
-                //译码 一个数字对应所对应项数的字节数 但实际读取八的倍数 因为有补零
-                std::string filecontent = ""//01串
+                InputStream input("Temp.LZ-zip");
+                std::string str = input.ReadFile(); 
+                std::string filecontent;  
+                for(int i=0;i<str.size();++i){
+                    filecontent.append(std::move(GetBytes(str[i])));
+                }
+                cout << "解析出来的位数 : " << filecontent.size() << endl;
                 Dencoding(filecontent);
             }
 
@@ -101,10 +146,10 @@ namespace LZ_zip{
                 for(const auto&[number, code] : length_code){
                     two += code.length() * length[number];
                 }
-/*                 cout << "literal : \n";
+                cout << "literal : \n";
                 for(const auto&[number, code] : literal_code){
                     std::cout << number << " :" << code << std::endl;
-                }  */
+                } 
                 int three = 0;
                 for(const auto&[number, code] : literal_code){
                     three += code.length() * literal[number];
@@ -112,6 +157,8 @@ namespace LZ_zip{
                 cout << "压缩后的distance : " << ans << endl; //位数            
                 cout << "压缩后的length : " << two << endl; //位数
                 cout << "压缩后的literal : " << three << endl; //位数
+                cout << "总位数 : " << ans+two+three << endl;
+                cout << "总字节数 : " << (ans+two+three)/8 << " 余 :"<<(ans+two+three)%8 << endl;
             }
     };
 
@@ -121,8 +168,34 @@ namespace LZ_zip{
     */
     void Huffman::WritingFile(){
         OutputStream os("Temp.LZ-zip");
-        //TODO 早上任务 :写入字节 然后测Dencoding函数 可以用bitsit测试
+        std::string major;
+        writingfile(major, os, OrderDistance, distance_code);
+        writingfile(major, os, OrderLength, length_code);
+        writingfile(major, os, OrderLiteral, literal_code);
+        if (ZeroFill(major)) os.WriteFile(ConStrchar(major, 0, 8));
+    }
 
+    bool Huffman::ZeroFill(std::string& str) const {
+        size_t len = 8 - str.size();
+        if(len){
+            while(len--) str.push_back('0');        
+            return true;
+        }
+        else return false;
+    }
+
+    template
+    <typename mp, typename Code>
+    void Huffman::writingfile
+    (std::string& major, OutputStream& os, const mp& key_value, Code& code){
+        for(const auto&number : key_value){
+            major.append(code[number]);
+            while(major.size() >= 8){
+                os.WriteFile(ConStrchar(major, 0, 8));
+                ++AllBytesInFile;
+                major.erase(0,8); //字符串这样操作效率较低
+            }
+        }
     }
 
     template
@@ -147,7 +220,6 @@ namespace LZ_zip{
             HuffmanTree[index].emplace_back(std::move(para2.second));
         }
         root = QueOfDistance.top().second;
-        cout << "root : " << root<< endl;
     }
 
     //TODO:设置为友元类不能直接使用vector 查下原因
@@ -155,53 +227,49 @@ namespace LZ_zip{
         auto code = LZ.code();
         for(const auto&[distance_, length_, literal_] : code){
             distance[distance_]++;
+            OrderDistance.push_back(distance_);
             length[length_]++;
+            OrderLength.push_back(length_);
             literal[literal_]++;
+            OrderLiteral.push_back(literal_);
+            //cout << "(" << distance_ << "," << length_ << "," << literal_<<")\n";
         }
         num_entry = code.size();
         DecodeResult.reserve(code.size() + 1);
     }
 
     //TODO 代码写的复用差 功能实现以后改一手
-    void Huffman::Dencoding(const std::string_view& filecontent){
+    void Huffman::Dencoding(const std::string& filecontent){
         size_t pos = 32;
         size_t n = 8;
-        size_t Inedx = 32;
+        size_t Index = 0;
         std::string str;
-        size_t distance_length  = ConStrNumber(filecontent.substr(pos, 32));
-        size_t num = 0;
-        pos += distance_length;
-        //distance 应该写入成功
-        while(Index < distance_length){
+        
+        size_t entry = 0;
+        while(entry < num_entry){
             str.push_back(filecontent[Index++]);
             if(distance_number.find(str) != distance_number.end()){
-                DecodeResult[num++].distance = distance_number[str];
-                str.clear();
-            }
-        }
-        
-        //length 应该写入成功
-        num = 0;
-        size_t length_length = ConStrNumber(filecontent.substr(pos, 32));
-        pos += length_length;
-        while(Index < length_length){
-            str.push_back(filecontent[Index++]);
-            if(length_number.find(str) != length_number.end()){
-                DecodeResult[num++].length = length_number[str];
+                DecodeResult[entry++].distance = distance_number[str];
                 str.clear();
             }
         }
 
-        num = 0;
-        size_t literal_length = ConStrNumber(filecontent.substr(pos, 32));
-        while(Index < literal_length){
+        entry = 0;
+        while(entry < num_entry){
             str.push_back(filecontent[Index++]);
-            if(literal_number.find(str) != literal_number.end()){
-                DecodeResult[num++].literal = literal_number[str];
+            if(length_number.find(str) != length_number.end()){
+                DecodeResult[entry++].length = length_number[str];
                 str.clear();
             }
         }
-        cout << "解析出来的项数 : " << num << endl;
+        entry = 0;
+        while(entry < num_entry){
+            str.push_back(filecontent[Index++]);
+            if(literal_number.find(str) != literal_number.end()){
+                DecodeResult[entry++].literal = literal_number[str];
+                str.clear();
+            }
+        }
     }
 
     void Huffman::dfs_distance(int Root, std::string&& str){
@@ -238,11 +306,37 @@ namespace LZ_zip{
         for(int i = 0 ;i < 65537; ++i) HuffmanTree[i].clear();
     }
 
-    size_t ConStrNumber(const std::string_view& str){
-        bitset<32> number(str, 0, 32);
-        return number.to_ulong();
+    int ConStrNumber(const std::string& str){
+        std::bitset<32> number(str, static_cast<size_t>(0), static_cast<size_t>(32));
+        return static_cast<int>(number.to_ulong());
     }
 
+    char ConStrchar(const std::string& str, size_t pos, size_t n){
+        std::bitset<8> number(str, pos , n);
+        return static_cast<char>(number.to_ulong());
+    }
+
+    //TODO : 这样会丢失字符 写完再想想
+    bool GetBit(std::stringstream& ss){
+        static int i = 7;
+        static char Bchar = 0;
+        static unsigned char bit[8] = {128, 64, 32, 16, 8, 4, 2, 1};
+        ++i;
+        if(i == 8){
+            ss >> Bchar;
+            i = 0;
+        }
+        return (Bchar&bit[i]);
+    }
+    
+    std::string GetBytes(char ch){
+        static unsigned char bit[8] = {128, 64, 32, 16, 8, 4, 2, 1};
+        std::string str;
+        for(int i=0;i<8;++i){
+            ch&bit[i] ? str.push_back('1') : str.push_back('0');
+        }
+        return str;
+    }
 }
 
 #endif
