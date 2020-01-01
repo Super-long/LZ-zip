@@ -57,6 +57,7 @@ namespace LZ_zip{
 
             void Encode() {LZ_encode();}
             void Decode() {LZ_decode();}
+            
             void ExchangeFilename(std::string str){
                 NodeQueue.clear();
                 FileStream.ExchangeOpenFile(str);

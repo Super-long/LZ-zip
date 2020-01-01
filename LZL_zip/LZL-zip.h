@@ -12,7 +12,8 @@ namespace LZ_zip{
             LZL_zip() = default;
             explicit LZL_zip(const std::string& str) :
                 LZ_ptr(std::make_unique<LZ77>(str)),
-                Huf_ptr(std::make_unique<Huffman>()){} 
+                Huf_ptr(std::make_unique<Huffman>()){}
+                
             void encode(){
                 LZ_ptr->Encode();
                 Huf_ptr->encode(LZ_ptr);
